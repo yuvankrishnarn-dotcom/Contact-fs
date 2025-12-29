@@ -12,7 +12,7 @@ pipeline {
     // -----------------------------
     stage("Checkout") {
       steps {
-        git branch: 'main',
+        git branch: 'master',
             credentialsId: 'github-creds',
             url: 'https://github.com/yuvankrishnarn-dotcom/Contact-fs.git'
       }
