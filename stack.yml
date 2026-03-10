@@ -1,0 +1,21 @@
+version: "3.8"
+
+services:
+
+  frontend:
+    image: yuvan77/contact-pri:contact-fe
+    ports:
+      - "80:80"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
+
+  backend:
+    image: yuvan77/contact-pri:contact-be
+    ports:
+      - "8000:8000"
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: any
