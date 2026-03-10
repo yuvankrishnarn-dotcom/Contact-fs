@@ -14,6 +14,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Set commit SHA
+      run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
@@ -24,21 +27,21 @@ jobs:
 
     - name: Build frontend image
       run: |
-        docker build -t ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe ./frontend
+        docker build -t ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe-${{ env.IMAGE_TAG }} ./frontend
 
     - name: Push frontend image
       run: |
-        docker push ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe
+        docker push ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe-${{ env.IMAGE_TAG }}
 
 # ---------- BUILD BACKEND ----------
 
     - name: Build backend image
       run: |
-        docker build -t ${{ secrets.DOCKER_USER }}/contact-pri:contact-be ./backend
+        docker build -t ${{ secrets.DOCKER_USER }}/contact-pri:contact-be-${{ env.IMAGE_TAG }} ./backend
 
     - name: Push backend image
       run: |
-        docker push ${{ secrets.DOCKER_USER }}/contact-pri:contact-be
+        docker push ${{ secrets.DOCKER_USER }}/contact-pri:contact-be-${{ env.IMAGE_TAG }}
 
     - name: Logout DockerHub
       run: docker logout
@@ -53,11 +56,16 @@ jobs:
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
 
+          IMAGE_TAG=${GITHUB_SHA::7}
+
           docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_TOKEN }}
 
-          docker pull ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe
-          docker pull ${{ secrets.DOCKER_USER }}/contact-pri:contact-be
+          docker pull ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe-$IMAGE_TAG
+          docker pull ${{ secrets.DOCKER_USER }}/contact-pri:contact-be-$IMAGE_TAG
 
           cd /home/ubuntu/contact-pri
+
+          sed -i "s/contact-fe:.*/contact-fe-$IMAGE_TAG/g" stack.yml
+          sed -i "s/contact-be:.*/contact-be-$IMAGE_TAG/g" stack.yml
 
           docker stack deploy --detach=true -c stack.yml contact-app
