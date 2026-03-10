@@ -3,7 +3,7 @@ import cors from "cors";
 import AWS from "aws-sdk";
 import { v4 as uuid } from "uuid";
 
-AWS.config.update({ region: "ap-south-1" });
+AWS.config.update({ region: "us-east-1" });
 const dynamo = new AWS.DynamoDB.DocumentClient();
 const TABLE = "Contacts";
 
