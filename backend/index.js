@@ -1,80 +1,63 @@
 import express from "express";
 import cors from "cors";
-import mysql from "mysql2/promise";
+import AWS from "aws-sdk";
 import { v4 as uuid } from "uuid";
+
+AWS.config.update({ region: "ap-south-1" });
+const dynamo = new AWS.DynamoDB.DocumentClient();
+const TABLE = "Contacts";
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// ------------------------
-// MYSQL CONNECTION (LOCAL)
-// ------------------------
-const db = await mysql.createPool({
-  host: "127.0.0.1",
-  user: "contactuser",
-  password: "StrongPassword123@",
-  database: "contactbook",
-  waitForConnections: true,
-  connectionLimit: 10
-});
-
-// ------------------------
-// HEALTH CHECK
-// ------------------------
 app.get("/health", (_, res) => res.send("ok"));
 
 // ------------------------
-// API ROUTES
+// API ROUTES WITH PREFIX
 // ------------------------
 const router = express.Router();
 
-// GET all contacts
 router.get("/contacts", async (_, res) => {
-  const [rows] = await db.query(
-    "SELECT * FROM contacts ORDER BY created_at DESC"
-  );
-  res.json(rows);
+  const data = await dynamo.scan({ TableName: TABLE }).promise();
+  res.json(data.Items || []);
 });
 
-// CREATE contact
 router.post("/contacts", async (req, res) => {
   const id = uuid();
-  const { name, email, phone } = req.body;
-
-  await db.query(
-    "INSERT INTO contacts (id, name, email, phone) VALUES (?, ?, ?, ?)",
-    [id, name, email, phone]
-  );
-
-  res.json({ id, name, email, phone });
+  const item = { id, ...req.body };
+  await dynamo.put({ TableName: TABLE, Item: item }).promise();
+  res.json(item);
 });
 
-// UPDATE contact
 router.put("/contacts/:id", async (req, res) => {
   const { id } = req.params;
-  const { name, email, phone } = req.body;
+  const body = req.body;
+  const keys = Object.keys(body);
 
-  await db.query(
-    "UPDATE contacts SET name=?, email=?, phone=? WHERE id=?",
-    [name, email, phone, id]
-  );
+  const UpdateExpression = "SET " + keys.map(k => `#${k}=:${k}`).join(", ");
+  const ExpressionAttributeNames = Object.fromEntries(keys.map(k => [`#${k}`, k]));
+  const ExpressionAttributeValues = Object.fromEntries(keys.map(k => [`:${k}`, body[k]]));
 
-  res.json({ id, name, email, phone });
+  await dynamo.update({
+    TableName: TABLE,
+    Key: { id },
+    UpdateExpression,
+    ExpressionAttributeNames,
+    ExpressionAttributeValues
+  }).promise();
+
+  res.json({ id, ...body });
 });
 
-// DELETE contact
 router.delete("/contacts/:id", async (req, res) => {
-  await db.query("DELETE FROM contacts WHERE id=?", [req.params.id]);
+  await dynamo.delete({ TableName: TABLE, Key: { id: req.params.id } }).promise();
   res.json({ message: "deleted" });
 });
 
-// mount prefix
+// mount API prefix
 app.use("/api", router);
 
 // ------------------------
-// LISTEN LOCAL ONLY
-// ------------------------
-app.listen(3000, "127.0.0.1", () => {
-  console.log("Backend running on http://localhost:3000");
-});
+
+app.listen(3000, () => console.log("API running on 3000"));
