@@ -60,6 +60,6 @@ jobs:
 
           cd /home/ubuntu/contact-pri
 
-          docker stack deploy -c stack.yml contact-app
+          docker stack deploy --detach=true -c stack.yml contact-app
 
           docker image prune -af
