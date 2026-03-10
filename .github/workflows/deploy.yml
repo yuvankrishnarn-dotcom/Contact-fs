@@ -58,14 +58,16 @@ jobs:
           cd /home/ubuntu
 
           if [ ! -d "contact-pri" ]; then
-            git clone https://github.com/yuvankrishnarn-dotcom.git contact-pri
+            git clone https://github.com/yuvankrishnarn-dotcom/Contact-fs.git /home/ubuntu/contact-pri
           fi
 
-          cd contact-pri
+          cd /home/ubuntu/contact-pri
           git pull origin master
 
           docker pull ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe
           docker pull ${{ secrets.DOCKER_USER }}/contact-pri:contact-be
+
+          cd Contact-fs
 
           docker stack deploy -c stack.yml contact-app
 
