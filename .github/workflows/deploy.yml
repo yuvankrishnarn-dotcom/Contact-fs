@@ -69,4 +69,4 @@ jobs:
           sed -i "s/contact-fe:.*/contact-fe-$IMAGE_TAG/g" stack.yml
           sed -i "s/contact-be:.*/contact-be-$IMAGE_TAG/g" stack.yml
 
-          docker stack deploy --detach=true -c stack.yml contact-app
+          docker stack deploy --with-registry-auth --detach=true -c stack.yml contact-app
