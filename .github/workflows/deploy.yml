@@ -1,0 +1,72 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKER_USER }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+# ---------- BUILD FRONTEND ----------
+
+    - name: Build frontend image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe ./frontend
+
+    - name: Push frontend image
+      run: |
+        docker push ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe
+
+# ---------- BUILD BACKEND ----------
+
+    - name: Build backend image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USER }}/contact-pri:contact-be ./backend
+
+    - name: Push backend image
+      run: |
+        docker push ${{ secrets.DOCKER_USER }}/contact-pri:contact-be
+
+    - name: Logout DockerHub
+      run: docker logout
+
+# ---------- DEPLOY ----------
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ${{ secrets.EC2_USER }}
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+
+          docker login -u ${{ secrets.DOCKER_USER }} -p ${{ secrets.DOCKER_TOKEN }}
+
+          cd /home/ubuntu
+
+          if [ ! -d "contact-pri" ]; then
+            git clone https://github.com/${{ github.repository }}.git contact-pri
+          fi
+
+          cd contact-pri
+          git pull origin master
+
+          docker pull ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe
+          docker pull ${{ secrets.DOCKER_USER }}/contact-pri:contact-be
+
+          docker stack deploy -c stack.yml contact-app
+
+          docker image prune -af
