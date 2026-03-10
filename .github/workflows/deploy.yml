@@ -58,7 +58,7 @@ jobs:
           cd /home/ubuntu
 
           if [ ! -d "contact-pri" ]; then
-            git clone https://github.com/${{ github.repository }}.git contact-pri
+            git clone https://github.com/yuvankrishnarn-dotcom.git contact-pri
           fi
 
           cd contact-pri
