@@ -1,13 +1,13 @@
-name: Build and Deploy with Docker Compose
+name: Build and Deploy with Docker Swarm
 
 on:
   push:
     branches:
       - master
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,22 +21,18 @@ jobs:
       # ---------- FRONTEND IMAGE ----------
     
       - name: Build frontend image
-        run: |
-          docker build -t ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe ./frontend
+        run: docker build -t ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe ./frontend
     
       - name: Push frontend image
-        run: |
-          docker push ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe
+        run: docker push ${{ secrets.DOCKER_USER }}/contact-pri:contact-fe
     
       # ---------- BACKEND IMAGE ----------
     
       - name: Build backend image
-        run: |
-          docker build -t ${{ secrets.DOCKER_USER }}/contact-pri:contact-be ./backend
+        run: docker build -t ${{ secrets.DOCKER_USER }}/contact-pri:contact-be ./backend
     
       - name: Push backend image
-        run: |
-          docker push ${{ secrets.DOCKER_USER }}/contact-pri:contact-be
+        run: docker push ${{ secrets.DOCKER_USER }}/contact-pri:contact-be
     
       # ---------- DEPLOY ----------
     
@@ -51,7 +47,9 @@ jobs:
     
             cd /home/ubuntu/contact-pri
     
-            docker compose pull
-            docker compose up -d
+            docker stack deploy \
+              --with-registry-auth \
+              -c stack.yml \
+              contact-app
     
             docker image prune -af
